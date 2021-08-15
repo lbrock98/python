@@ -3,7 +3,6 @@
 """
 Created on Tue Jul 27 14:32:37 2021
 
-@author: Lucy
 """
 import urllib
 import json
