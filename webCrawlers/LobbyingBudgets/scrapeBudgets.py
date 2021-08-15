@@ -19,7 +19,7 @@ rate = 1
 rate2 = 5
 
 # create instance of google chrome and open website
-driver = webdriver.Chrome('/Users/Lucy/Documents/chromedriver')
+driver = webdriver.Chrome('/Users/LBrock/Documents/chromedriver')
 
 # get csv info
 companies = []
