@@ -3,8 +3,6 @@
 """
 Created on Thu Jul 29 11:40:10 2021
 
-@author: Lucy
-
 This file uses a file of US populations by census tract, a census tract shapefile,
 and a subcounty shapefile to get subcounty populations for LA county and Orange county. 
 
@@ -25,7 +23,7 @@ import json
 year = 2019
 
 #get population by census tract
-f = urllib.request.urlopen(f'https://api.census.gov/data/{year}/acs/acs5?get=NAME,B01001_001E&for=tract:*&in=state:06&key=fe6d5b03221189e31343c50fb863de67db0d30e9')
+f = urllib.request.urlopen(f'https://api.census.gov/data/{year}/acs/acs5?get=NAME,B01001_001E&for=tract:*&in=state:06&key={CENSUS_KEY}')
 s = f.read().decode('utf-8')
 s = s[1:-1]
 header = s.split('],')[0] + ']'
@@ -50,11 +48,11 @@ allPop['GEOID'] = geo_id
 
 #import california census tract shapefile
 urllib.request.urlretrieve(f"https://www2.census.gov/geo/tiger/TIGER{year}/TRACT/tl_{year}_06_tract.zip", 
-               f"/Users/Lucy/Documents/Work/Ichor/censusData/shapefiles/tl_{year}_06_tract.zip")
-with zipfile.ZipFile(f"/Users/Lucy/Documents/Work/Ichor/censusData/shapefiles/tl_{year}_06_tract.zip",'r') as zip_ref:
-    zip_ref.extractall(f'/Users/Lucy/Documents/Work/Ichor/censusData/shapefiles/tl_{year}_06_tract')
-os.remove(f"/Users/Lucy/Documents/Work/Ichor/censusData/shapefiles/tl_{year}_06_tract.zip")    
-tracts = gp.read_file(f"/Users/Lucy/Documents/Work/Ichor/censusData/shapefiles/tl_{year}_06_tract/tl_{year}_06_tract.shp")
+               f"/Users/LBrock/Documents/censusData/shapefiles/tl_{year}_06_tract.zip")
+with zipfile.ZipFile(f"/Users/LBrock/Documents/censusData/shapefiles/tl_{year}_06_tract.zip",'r') as zip_ref:
+    zip_ref.extractall(f'/Users/LBrock/Documents/censusData/shapefiles/tl_{year}_06_tract')
+os.remove(f"/Users/LBrock/Documents/censusData/shapefiles/tl_{year}_06_tract.zip")    
+tracts = gp.read_file(f"/Users/LBrock/Documents/censusData/shapefiles/tl_{year}_06_tract/tl_{year}_06_tract.shp")
 tracts.drop(columns = ['NAME', 'NAMELSAD', 'MTFCC', 'FUNCSTAT', 'ALAND', 'AWATER', 'INTPTLAT', 'INTPTLON'], inplace = True)
 
 #add population data to census tracts geodataframe
@@ -62,7 +60,7 @@ allPop.drop(columns = ['name', 'state', 'county', 'tract'], inplace = True)
 tracts = tracts.merge(allPop, on='GEOID')
 
 #import subcounty shapefile
-sub = gp.read_file(f"/Users/Lucy/Documents/Work/Ichor/censusData/shapefiles/subcounty_shapefile/cb_{year}_us_cousub_500k.shp")
+sub = gp.read_file(f"/Users/LBrock/Documents/censusData/shapefiles/subcounty_shapefile/cb_{year}_us_cousub_500k.shp")
 sub.drop(columns = ['COUSUBNS', 'AFFGEOID', 'LSAD', 'ALAND', 'AWATER'], inplace = True)
 
 #filter subcounty to those within LA county and orange county
@@ -116,16 +114,16 @@ cols = [cols[i] for i in reorder]
 final = final[cols]
 
 #export to csv 
-final.to_csv('/Users/Lucy/Documents/Work/Ichor/censusData/population/CA_subcounties.csv', header=False, index=False)
+final.to_csv('/Users/LBrock/Documents/censusData/population/CA_subcounties.csv', header=False, index=False)
 
 #export to pgAdmin
-with open("/Users/Lucy/Documents/Work/Ichor/censusData/pgAdmin_info.json") as f:
+with open("/Users/LBrock/Documents/censusData/pgAdmin_info.json") as f:
     conf=json.load(f)
 
 conn = psycopg2.connect("dbname="+conf['dbname']+" user="+conf['user']+" password="+conf['password']+" host="+conf['host']+" port="+conf['port'])  
 cur = conn.cursor(cursor_factory=RealDictCursor)
 
-file = open('/Users/Lucy/Documents/Work/Ichor/censusData/population/CA_subcounties.csv')
+file = open('/Users/LBrock/Documents/censusData/population/CA_subcounties.csv')
 
 cur.copy_from(file,'population.census_data', sep=',', columns = ('year', 'geo_type', 'geo_id', 'metric', 'metric_value'), null = '') 
 conn.commit()
