@@ -3,10 +3,9 @@
 """
 Created on Tue Aug  3 11:07:00 2021
 
-@author: Lucy
 
 Note that for cities where multiple neighborhoods fall within one census tract,
-the census tract population will be calculated multiple times.
+the census tract's population will be assigned to the neighborhood it falls into most. 
 """
 import pandas as pd
 import geopandas as gp
@@ -24,7 +23,7 @@ final = pd.DataFrame(columns = ['name', 'pop', 'state_id', 'hood_id'])
 state = 1
 while state < 57:
     #get census tract populations by state
-    f = urllib.request.urlopen(f'https://api.census.gov/data/{year}/acs/acs5?get=NAME,B01001_001E&for=tract:*&in=state:{state:02d}&key=fe6d5b03221189e31343c50fb863de67db0d30e9')
+    f = urllib.request.urlopen(f'https://api.census.gov/data/{year}/acs/acs5?get=NAME,B01001_001E&for=tract:*&in=state:{state:02d}&key={CENSUS_KEY}')
     s = f.read().decode('utf-8')
     s = s[1:-1]
     header = s.split('],')[0] + ']'
@@ -43,17 +42,17 @@ while state < 57:
     #get census tract shapefile by state
     try:
         urllib.request.urlretrieve(f"https://www2.census.gov/geo/tiger/TIGER{year}/TRACT/tl_{year}_{state:02d}_tract.zip", 
-                       f"/Users/Lucy/Documents/Work/Ichor/censusData/shapefiles/tl_{year}_{state:02d}_tract.zip")
+                       f"/Users/LBrock/Documents/censusData/shapefiles/tl_{year}_{state:02d}_tract.zip")
         print(f"Got census tract shapefile {state:02d}")
     except urllib.error.HTTPError:
         print(state)
         state += 1
         continue
     else:
-        with zipfile.ZipFile(f"/Users/Lucy/Documents/Work/Ichor/censusData/shapefiles/tl_{year}_{state:02d}_tract.zip",'r') as zip_ref:
-            zip_ref.extractall(f'/Users/Lucy/Documents/Work/Ichor/censusData/shapefiles/tl_{year}_{state:02d}_tract')
-        os.remove(f"/Users/Lucy/Documents/Work/Ichor/censusData/shapefiles/tl_{year}_{state:02d}_tract.zip")    
-        tracts = gp.read_file(f"/Users/Lucy/Documents/Work/Ichor/censusData/shapefiles/tl_{year}_{state:02d}_tract/tl_{year}_{state:02d}_tract.shp")
+        with zipfile.ZipFile(f"/Users/LBrock/Documents/censusData/shapefiles/tl_{year}_{state:02d}_tract.zip",'r') as zip_ref:
+            zip_ref.extractall(f'/Users/LBrock/Documents/censusData/shapefiles/tl_{year}_{state:02d}_tract')
+        os.remove(f"/Users/LBrock/Documents/censusData/shapefiles/tl_{year}_{state:02d}_tract.zip")    
+        tracts = gp.read_file(f"/Users/LBrock/Documents/censusData/shapefiles/tl_{year}_{state:02d}_tract/tl_{year}_{state:02d}_tract.shp")
         tracts.drop(columns = ['NAME', 'NAMELSAD', 'MTFCC', 'FUNCSTAT', 'ALAND', 'AWATER', 'INTPTLAT', 'INTPTLON'], inplace = True)
         print(f"Downloaded shapefile and loaded to geodataframe {state:02d}")
 
@@ -61,7 +60,7 @@ while state < 57:
         tracts = tracts.merge(df_pop, on='GEOID')
     
         #import neighborhood shapefile 
-        hoods = gp.read_file('/Users/Lucy/Documents/Work/Ichor/censusData/hoods.geojson')
+        hoods = gp.read_file('/Users/LBrock/Documents/censusData/hoods.geojson')
         
         #overlay neighborhoods with census tracts 
         merged1 = gp.overlay(hoods, tracts, how='intersection')
@@ -105,16 +104,16 @@ cols = [cols[i] for i in reorder]
 final = final[cols]
 
 #export to csv
-final.to_csv('/Users/Lucy/Documents/Work/Ichor/censusData/population/all_neighborhoods.csv', header=False, index=False)
+final.to_csv('/Users/LBrock/Documents/censusData/population/all_neighborhoods.csv', header=False, index=False)
 
 #export to pgAdmin
-with open("/Users/Lucy/Documents/Work/Ichor/censusData/pgAdmin_info.json") as f:
+with open("/Users/LBrock/Documents/censusData/pgAdmin_info.json") as f:
     conf=json.load(f)
 
 conn = psycopg2.connect("dbname="+conf['dbname']+" user="+conf['user']+" password="+conf['password']+" host="+conf['host']+" port="+conf['port'])  
 cur = conn.cursor(cursor_factory=RealDictCursor)
 
-file = open('/Users/Lucy/Documents/Work/Ichor/censusData/population/all_neighborhoods.csv')
+file = open('/Users/LBrock/Documents/censusData/population/all_neighborhoods.csv')
 
 cur.copy_from(file,'population.census_data', sep=',', columns = ('year', 'geo_type', 'geo_id', 'metric', 'metric_value'), null = '') 
 conn.commit()
